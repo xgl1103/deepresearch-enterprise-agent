@@ -2,8 +2,6 @@
 
 本项目是一个面向企业工程化场景改造的 DeepResearch 应用，核心目标不是只跑通 Demo，而是把“研究型 Agent”拆成可鉴权、可排队、可持久化、可观测、可运维的服务形态。
 
-![DeepResearch 应用截图](./app.png)
-
 ## 开源说明
 
 本仓库以 MIT License 开源，适合用于学习、二次开发和工程实践参考。项目中的 `.env.example` 与 `.env.docker.example` 只提供配置模板，不包含真实密钥。
@@ -25,6 +23,24 @@
 - 可观测性：健康检查、Prometheus metrics、结构化日志、审计事件。
 - 运维脚本：Docker Compose 依赖服务、备份恢复脚本、密钥扫描脚本、GitHub Actions。
 
+## 运行流程截图
+
+### 1. 输入研究主题
+
+![输入研究主题](./docs/assets/01-research-entry.png)
+
+### 2. 需求澄清与确认
+
+![需求澄清与确认](./docs/assets/02-requirement-clarification.png)
+
+### 3. 研究进度追踪
+
+![研究进度追踪](./docs/assets/03-research-progress.png)
+
+### 4. 最终研究报告
+
+![最终研究报告](./docs/assets/04-final-report.png)
+
 ## 项目结构
 
 ```text
@@ -38,6 +54,7 @@
 │   ├── src/
 │   └── package.json
 ├── docs/
+│   ├── assets/               # README 运行流程截图
 │   └── enterprise-runbook.md # 当前单机部署形态的企业化运维说明
 ├── scripts/                 # 备份、恢复、密钥扫描脚本
 ├── docker-compose.yml
