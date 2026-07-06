@@ -6,7 +6,7 @@
 
 ## 开源说明
 
-本仓库以 MIT License 开源，适合用于学习、二次开发和面试项目展示。项目中的 `.env.example` 与 `.env.docker.example` 只提供配置模板，不包含真实密钥。
+本仓库以 MIT License 开源，适合用于学习、二次开发和工程实践参考。项目中的 `.env.example` 与 `.env.docker.example` 只提供配置模板，不包含真实密钥。
 
 请不要提交以下内容：
 
@@ -135,17 +135,6 @@ npm run build
 - Docker Compose 配置校验
 - 运维脚本语法检查
 - committed-file 密钥扫描
-
-## 面试演示建议
-
-推荐演示路径：
-
-1. 登录系统；
-2. 在前端输入一个研究主题；
-3. 展示“生成计划 → 用户确认 → 搜索/反思/写作 → 最终报告”的完整流程；
-4. 打开 `/api/research/{task_id}/result` 展示结果已持久化；
-5. 说明 API 与 Worker 分离、Redis Stream 队列、PostgreSQL 结果表、审计和限流设计；
-6. 说明当前仍是单机工程化部署，后续可迁移到企业服务器或 Kubernetes。
 
 ## 企业化说明
 
