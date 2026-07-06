@@ -35,13 +35,13 @@ SKIP_PARTS = {
 
 def _tracked_files() -> list[Path]:
     result = subprocess.run(
-        ["git", "ls-files"],
+        ["git", "-c", "core.quotePath=false", "ls-files", "-z"],
         check=True,
         text=True,
         encoding="utf-8",
         stdout=subprocess.PIPE,
     )
-    return [Path(line) for line in result.stdout.splitlines() if line.strip()]
+    return [Path(item) for item in result.stdout.split("\0") if item]
 
 
 def _is_allowed_assignment(match: re.Match[str]) -> bool:
