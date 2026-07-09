@@ -27,7 +27,7 @@ from agent.auth.authorization import user_owns_thread
 from agent.audit import write_audit_event
 from agent.db.engine import get_session_factory
 from agent.db.models import UserThread
-from agent.db.results import get_research_result
+from agent.db.results import get_research_result, list_user_research_history
 from agent.runtime_config import validate_runtime_config
 from agent.limits import admit_research, release_research_slot
 from agent.observability import (
@@ -448,6 +448,21 @@ async def cancel_research(task_id: str, request: Request):
         resource_id=task_id,
     )
     return JSONResponse(content={"task_id": task_id, "cancel_requested": True})
+
+
+@app.get("/api/research/history")
+async def research_history(request: Request, limit: int = 20):
+    """Return the current user's recent research threads for UI restoration."""
+    user_id: int = getattr(request.state, "user_id", 0)
+    items = await list_user_research_history(user_id, limit=limit)
+    await write_audit_event(
+        "research_history_read",
+        "research_thread",
+        "success",
+        user_id=user_id,
+        details={"limit": max(1, min(limit, 50)), "count": len(items)},
+    )
+    return JSONResponse(content={"items": items})
 
 
 @app.get("/api/research/{task_id}/status")

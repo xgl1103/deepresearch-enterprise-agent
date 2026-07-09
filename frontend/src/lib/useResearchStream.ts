@@ -1,7 +1,8 @@
 // 基于 SSE 的研究流 hook
 // 与 @langchain/langgraph-sdk 的 useStream 并存，用于异步任务场景
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { fetchResearchHistory } from "@/lib/api";
 
 const API_BASE_URL = "";
 
@@ -56,6 +57,7 @@ export function useResearchStream(): UseResearchStreamReturn {
   const messageIdCounter = useRef(0);
   const planRef = useRef("");  // 缓存 generate_plan 中的计划内容
   const taskIdRef = useRef<string>("");  // 保存首次任务响应的 task_id，后续提交复用
+  const loadedHistoryRef = useRef(false);
 
   // 流式状态 refs（避免闭包过期问题）
   const streamingNodeRef = useRef<string | null>(null);
@@ -83,6 +85,45 @@ export function useResearchStream(): UseResearchStreamReturn {
     setAwaitingPlanConfirmation(false);
     _resetStreaming();
   }, [_resetStreaming]);
+
+  useEffect(() => {
+    if (loadedHistoryRef.current) return;
+    loadedHistoryRef.current = true;
+
+    fetchResearchHistory(1)
+      .then((items) => {
+        const latest = items[0];
+        if (!latest) return;
+        taskIdRef.current = latest.task_id;
+
+        const restoredMessages: ResearchMessage[] = [
+          {
+            type: "human",
+            content: latest.title,
+            id: String(++messageIdCounter.current),
+          },
+        ];
+
+        if (latest.report) {
+          restoredMessages.push({
+            type: "ai",
+            content: latest.report,
+            id: String(++messageIdCounter.current),
+          });
+        } else if (latest.status) {
+          restoredMessages.push({
+            type: "ai",
+            content: `已恢复最近任务，当前状态：${latest.status}`,
+            id: String(++messageIdCounter.current),
+          });
+        }
+
+        setMessages(restoredMessages);
+      })
+      .catch((err: unknown) => {
+        console.warn("恢复历史记录失败:", err);
+      });
+  }, []);
 
   const submit = useCallback(
     async (input: string, effort: string, model: string, extra?: { plan?: string; planStatus?: string }) => {

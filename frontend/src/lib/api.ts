@@ -11,6 +11,17 @@ export interface ModelConfig {
   icon_color: string;
 }
 
+export interface ResearchHistoryItem {
+  task_id: string;
+  title: string;
+  status: string;
+  report: string | null;
+  sources: unknown[];
+  error_type: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 // 获取可用模型列表
 export async function fetchAvailableModels(): Promise<ModelConfig[]> {
   try {
@@ -31,4 +42,15 @@ export async function fetchAvailableModels(): Promise<ModelConfig[]> {
       { model_id: "qwen3.7-max", display_name: "Qwen-Max", icon: "Cpu", icon_color: "purple-400" },
     ];
   }
+}
+
+export async function fetchResearchHistory(limit = 20): Promise<ResearchHistoryItem[]> {
+  const response = await fetch(`${API_BASE_URL}/api/research/history?limit=${limit}`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  const data = await response.json();
+  return Array.isArray(data.items) ? data.items : [];
 }
