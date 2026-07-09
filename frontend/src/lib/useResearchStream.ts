@@ -125,7 +125,7 @@ export function useResearchStream(): UseResearchStreamReturn {
           break;
         case "high":
           initial_search_query_count = 5;
-          max_research_loops = 10;
+          max_research_loops = 5;
           break;
       }
 
@@ -286,6 +286,14 @@ export function useResearchStream(): UseResearchStreamReturn {
         setEvents(prev => [
           ...prev,
           { error: message } as ResearchEvent,
+        ]);
+        setMessages(prev => [
+          ...prev,
+          {
+            type: "ai",
+            content: `提交失败：${message}`,
+            id: String(++messageIdCounter.current),
+          },
         ]);
       }
     },
