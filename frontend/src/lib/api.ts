@@ -45,7 +45,7 @@ export async function fetchAvailableModels(): Promise<ModelConfig[]> {
 }
 
 export async function fetchResearchHistory(limit = 20): Promise<ResearchHistoryItem[]> {
-  const response = await fetch(`${API_BASE_URL}/api/research/history?limit=${limit}`, {
+  const response = await fetch(`${API_BASE_URL}/api/research-history?limit=${limit}`, {
     credentials: "include",
   });
   if (!response.ok) {

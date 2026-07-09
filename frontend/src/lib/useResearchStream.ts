@@ -36,6 +36,7 @@ interface UseResearchStreamReturn {
   messages: ResearchMessage[];
   history: ResearchHistoryItem[];
   activeTaskId: string;
+  historyError: string;
   plan: string;
   awaitingPlanConfirmation: boolean;
   isLoading: boolean;
@@ -60,6 +61,7 @@ export function useResearchStream(): UseResearchStreamReturn {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [history, setHistory] = useState<ResearchHistoryItem[]>([]);
   const [activeTaskId, setActiveTaskId] = useState("");
+  const [historyError, setHistoryError] = useState("");
   const [streamingNode, setStreamingNode] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -123,9 +125,14 @@ export function useResearchStream(): UseResearchStreamReturn {
 
   const refreshHistory = useCallback(async () => {
     setIsHistoryLoading(true);
+    setHistoryError("");
     try {
       const items = await fetchResearchHistory(20);
       setHistory(items);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "历史记录加载失败";
+      setHistoryError(message);
+      throw err;
     } finally {
       setIsHistoryLoading(false);
     }
@@ -161,6 +168,7 @@ export function useResearchStream(): UseResearchStreamReturn {
 
     fetchResearchHistory(20)
       .then((items) => {
+        setHistoryError("");
         setHistory(items);
         const latest = items[0];
         if (!latest) return;
@@ -170,6 +178,7 @@ export function useResearchStream(): UseResearchStreamReturn {
       })
       .catch((err: unknown) => {
         console.warn("恢复历史记录失败:", err);
+        setHistoryError(err instanceof Error ? err.message : "历史记录加载失败");
       });
   }, [buildMessagesFromHistoryItem]);
 
@@ -398,6 +407,7 @@ export function useResearchStream(): UseResearchStreamReturn {
     messages,
     history,
     activeTaskId,
+    historyError,
     plan,
     awaitingPlanConfirmation,
     isLoading,

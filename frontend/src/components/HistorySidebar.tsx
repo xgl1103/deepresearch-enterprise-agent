@@ -8,6 +8,7 @@ interface HistorySidebarProps {
   items: ResearchHistoryItem[];
   activeTaskId: string;
   isLoading: boolean;
+  error: string;
   onSelect: (item: ResearchHistoryItem) => void;
   onNewResearch: () => void;
   onRefresh: () => void;
@@ -41,6 +42,7 @@ export function HistorySidebar({
   items,
   activeTaskId,
   isLoading,
+  error,
   onSelect,
   onNewResearch,
   onRefresh,
@@ -76,7 +78,11 @@ export function HistorySidebar({
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
-          {items.length === 0 && !isLoading ? (
+          {error ? (
+            <div className="px-3 py-6 text-sm text-red-300">
+              历史记录加载失败：{error}
+            </div>
+          ) : items.length === 0 && !isLoading ? (
             <div className="px-3 py-6 text-sm text-neutral-500">暂无历史记录</div>
           ) : (
             items.map((item) => {

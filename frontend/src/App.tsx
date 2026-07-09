@@ -111,15 +111,22 @@ export default function App() {
     researchStream.startNewResearch();
   }, [researchStream]);
 
+  const handleRefreshHistory = useCallback(() => {
+    void researchStream.refreshHistory().catch((err: unknown) => {
+      console.warn("刷新历史记录失败:", err);
+    });
+  }, [researchStream]);
+
   return (
     <div className="flex h-screen bg-neutral-800 text-neutral-100 font-sans antialiased">
       <HistorySidebar
         items={researchStream.history}
         activeTaskId={researchStream.activeTaskId}
         isLoading={researchStream.isHistoryLoading}
+        error={researchStream.historyError}
         onSelect={handleSelectHistory}
         onNewResearch={handleNewResearch}
-        onRefresh={researchStream.refreshHistory}
+        onRefresh={handleRefreshHistory}
       />
       <main className="h-full w-full max-w-4xl mx-auto">
           {researchStream.messages.length === 0 ? (

@@ -450,7 +450,7 @@ async def cancel_research(task_id: str, request: Request):
     return JSONResponse(content={"task_id": task_id, "cancel_requested": True})
 
 
-@app.get("/api/research/history")
+@app.get("/api/research-history")
 async def research_history(request: Request, limit: int = 20):
     """Return the current user's recent research threads for UI restoration."""
     user_id: int = getattr(request.state, "user_id", 0)
