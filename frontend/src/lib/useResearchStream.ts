@@ -2,7 +2,7 @@
 // 与 @langchain/langgraph-sdk 的 useStream 并存，用于异步任务场景
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { fetchResearchHistory } from "@/lib/api";
+import { fetchResearchHistory, type ResearchHistoryItem } from "@/lib/api";
 
 const API_BASE_URL = "";
 
@@ -34,14 +34,20 @@ interface ResearchEvent {
 interface UseResearchStreamReturn {
   events: ResearchEvent[];
   messages: ResearchMessage[];
+  history: ResearchHistoryItem[];
+  activeTaskId: string;
   plan: string;
   awaitingPlanConfirmation: boolean;
   isLoading: boolean;
+  isHistoryLoading: boolean;
   /** 当前正在流式输出的节点名称（null 表示非流式状态） */
   streamingNode: string | null;
   /** 当前节点已流式输出的累计文本 */
   streamingContent: string;
   submit: (input: string, effort: string, model: string, extra?: { plan?: string; planStatus?: string }) => Promise<void>;
+  refreshHistory: () => Promise<void>;
+  restoreHistoryItem: (item: ResearchHistoryItem) => void;
+  startNewResearch: () => void;
   stop: () => void;
 }
 
@@ -51,6 +57,9 @@ export function useResearchStream(): UseResearchStreamReturn {
   const [plan, setPlan] = useState("");
   const [awaitingPlanConfirmation, setAwaitingPlanConfirmation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [history, setHistory] = useState<ResearchHistoryItem[]>([]);
+  const [activeTaskId, setActiveTaskId] = useState("");
   const [streamingNode, setStreamingNode] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState("");
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -71,6 +80,32 @@ export function useResearchStream(): UseResearchStreamReturn {
     setStreamingContent("");
   }, []);
 
+  const buildMessagesFromHistoryItem = useCallback((item: ResearchHistoryItem): ResearchMessage[] => {
+    const restoredMessages: ResearchMessage[] = [
+      {
+        type: "human",
+        content: item.title,
+        id: String(++messageIdCounter.current),
+      },
+    ];
+
+    if (item.report) {
+      restoredMessages.push({
+        type: "ai",
+        content: item.report,
+        id: String(++messageIdCounter.current),
+      });
+    } else if (item.status) {
+      restoredMessages.push({
+        type: "ai",
+        content: `已恢复历史任务，当前状态：${item.status}`,
+        id: String(++messageIdCounter.current),
+      });
+    }
+
+    return restoredMessages;
+  }, []);
+
   const stop = useCallback((cancelBackend = true) => {
     const taskId = taskIdRef.current;
     eventSourceRef.current?.close();
@@ -86,44 +121,57 @@ export function useResearchStream(): UseResearchStreamReturn {
     _resetStreaming();
   }, [_resetStreaming]);
 
+  const refreshHistory = useCallback(async () => {
+    setIsHistoryLoading(true);
+    try {
+      const items = await fetchResearchHistory(20);
+      setHistory(items);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, []);
+
+  const restoreHistoryItem = useCallback((item: ResearchHistoryItem) => {
+    stop(false);
+    taskIdRef.current = item.task_id;
+    setActiveTaskId(item.task_id);
+    planRef.current = "";
+    setPlan("");
+    setEvents([]);
+    setAwaitingPlanConfirmation(false);
+    _resetStreaming();
+    setMessages(buildMessagesFromHistoryItem(item));
+  }, [buildMessagesFromHistoryItem, _resetStreaming, stop]);
+
+  const startNewResearch = useCallback(() => {
+    stop(false);
+    taskIdRef.current = "";
+    setActiveTaskId("");
+    planRef.current = "";
+    setPlan("");
+    setEvents([]);
+    setMessages([]);
+    setAwaitingPlanConfirmation(false);
+    _resetStreaming();
+  }, [_resetStreaming, stop]);
+
   useEffect(() => {
     if (loadedHistoryRef.current) return;
     loadedHistoryRef.current = true;
 
-    fetchResearchHistory(1)
+    fetchResearchHistory(20)
       .then((items) => {
+        setHistory(items);
         const latest = items[0];
         if (!latest) return;
         taskIdRef.current = latest.task_id;
-
-        const restoredMessages: ResearchMessage[] = [
-          {
-            type: "human",
-            content: latest.title,
-            id: String(++messageIdCounter.current),
-          },
-        ];
-
-        if (latest.report) {
-          restoredMessages.push({
-            type: "ai",
-            content: latest.report,
-            id: String(++messageIdCounter.current),
-          });
-        } else if (latest.status) {
-          restoredMessages.push({
-            type: "ai",
-            content: `已恢复最近任务，当前状态：${latest.status}`,
-            id: String(++messageIdCounter.current),
-          });
-        }
-
-        setMessages(restoredMessages);
+        setActiveTaskId(latest.task_id);
+        setMessages(buildMessagesFromHistoryItem(latest));
       })
       .catch((err: unknown) => {
         console.warn("恢复历史记录失败:", err);
       });
-  }, []);
+  }, [buildMessagesFromHistoryItem]);
 
   const submit = useCallback(
     async (input: string, effort: string, model: string, extra?: { plan?: string; planStatus?: string }) => {
@@ -213,6 +261,8 @@ export function useResearchStream(): UseResearchStreamReturn {
         // 保存 task_id 供后续提交复用
         if (task_id) {
           taskIdRef.current = task_id;
+          setActiveTaskId(task_id);
+          void refreshHistory();
         }
 
         // 2. 建立 SSE 连接接收事件
@@ -286,6 +336,7 @@ export function useResearchStream(): UseResearchStreamReturn {
                 },
               ]);
               _resetStreaming();
+              void refreshHistory();
               es.close();
             }
 
@@ -304,6 +355,7 @@ export function useResearchStream(): UseResearchStreamReturn {
                   id: String(++messageIdCounter.current),
                 },
               ]);
+              void refreshHistory();
               es.close();
             }
           } catch {
@@ -338,18 +390,24 @@ export function useResearchStream(): UseResearchStreamReturn {
         ]);
       }
     },
-    [messages, stop, _resetStreaming]
+    [messages, stop, _resetStreaming, refreshHistory]
   );
 
   return {
     events,
     messages,
+    history,
+    activeTaskId,
     plan,
     awaitingPlanConfirmation,
     isLoading,
+    isHistoryLoading,
     streamingNode,
     streamingContent,
     submit,
+    refreshHistory,
+    restoreHistoryItem,
+    startNewResearch,
     stop,
   };
 }

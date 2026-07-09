@@ -3,6 +3,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ProcessedEvent } from "@/components/ActivityTimeline";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { ResearchStreamChatView } from "@/components/ResearchStreamChatView";
+import { HistorySidebar } from "@/components/HistorySidebar";
+import type { ResearchHistoryItem } from "@/lib/api";
 
 export default function App() {
   const [processedEventsTimeline, setProcessedEventsTimeline] = useState<
@@ -94,8 +96,31 @@ export default function App() {
     researchStream.stop();
   }, [researchStream]);
 
+  const handleSelectHistory = useCallback(
+    (item: ResearchHistoryItem) => {
+      setProcessedEventsTimeline([]);
+      processedResearchEventCountRef.current = 0;
+      researchStream.restoreHistoryItem(item);
+    },
+    [researchStream]
+  );
+
+  const handleNewResearch = useCallback(() => {
+    setProcessedEventsTimeline([]);
+    processedResearchEventCountRef.current = 0;
+    researchStream.startNewResearch();
+  }, [researchStream]);
+
   return (
     <div className="flex h-screen bg-neutral-800 text-neutral-100 font-sans antialiased">
+      <HistorySidebar
+        items={researchStream.history}
+        activeTaskId={researchStream.activeTaskId}
+        isLoading={researchStream.isHistoryLoading}
+        onSelect={handleSelectHistory}
+        onNewResearch={handleNewResearch}
+        onRefresh={researchStream.refreshHistory}
+      />
       <main className="h-full w-full max-w-4xl mx-auto">
           {researchStream.messages.length === 0 ? (
             <WelcomeScreen
